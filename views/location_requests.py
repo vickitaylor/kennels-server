@@ -1,3 +1,4 @@
+
 LOCATIONS = [
     {
         "id": 1,
@@ -34,7 +35,13 @@ def get_single_location(id):
 
 def create_location(location):
     """
-    function creates a new location
+    Function that adds an new location to the list
+
+    Args:
+        location (dict): The new location to be added
+
+    Returns:
+        dict: The location that was added with its new id
     """
     max_id = LOCATIONS[-1]["id"]
     new_id = max_id + 1
@@ -42,14 +49,32 @@ def create_location(location):
     LOCATIONS.append(location)
     return location
 
+
 def delete_location(id):
     """
-    function deletes a location by the id
+    Removes the selected location from the list
+
+    Args:
+        id (int): The id of the location to be deleted
     """
     location_index = -1
     for index, location in enumerate(LOCATIONS):
         if location["id"] == id:
             location_index = index
-    
+
     if location_index >= 0:
         LOCATIONS.pop(location_index)
+
+
+def update_location(id, updated_location):
+    """
+    Updates a single location in the database
+
+    Args:
+        id (int): The id of the location
+        updated_location (dict): The updated location dictionary
+    """
+    for index, location in enumerate(LOCATIONS):
+        if location["id"] == id:
+            LOCATIONS[index] = updated_location
+            break
