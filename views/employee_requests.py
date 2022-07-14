@@ -1,39 +1,83 @@
+import sqlite3
+import json
+from models import Employee
+
 EMPLOYEES = [
     {
         "id": 1,
-        "name": "Sunny Riversounds"
+        "name": "Sunny River"
     },
     {
         "id": 2,
-        "name": "Butterfly Soulflight"
+        "name": "Butterfly Soul"
     }
 ]
 
 
 def get_all_employees():
     """
-    function gets all employees
+    Gets all employees from the database
+
+    Returns:
+        string: JSON serialized string of the contents of the employee table
     """
-    return EMPLOYEES
+    with sqlite3.connect("./kennel.sqlite3") as conn:
+
+        conn.row_factory = sqlite3.Row
+        db_cursor = conn.cursor()
+
+        db_cursor.execute("""
+        SELECT
+            a.id,
+            a.name,
+            a.address,
+            a.location_id
+        FROM employee a
+        """)
+
+        employees = []
+
+        dataset = db_cursor.fetchall()
+
+        for row in dataset:
+            employee = Employee(row['id'], row['name'],
+                                row['address'], row['location_id'])
+
+            employees.append(employee.__dict__)
+
+    return json.dumps(employees)
 
 
 def get_single_employee(id):
     """
-    function gets a single employee by their id
+    Gets the requested employee from the database
 
     Args:
-        id (int): the employee id
+        id (int): The id of the requested employee
 
     Returns:
-        dict: the single employee
+        string: JSON serialized string of the employee from the database
     """
-    requested_employee = None
+    with sqlite3.connect("./kennel.sqlite3") as conn:
+        conn.row_factory = sqlite3.Row
+        db_cursor = conn.cursor()
 
-    for employee in EMPLOYEES:
-        if employee["id"] == id:
-            requested_employee = employee
+        db_cursor.execute("""
+        SELECT
+            a.id,
+            a.name,
+            a.address,
+            a.location_id
+        FROM employee a
+        WHERE a.id = ?
+        """, (id, ))
 
-    return requested_employee
+        data = db_cursor.fetchone()
+
+        employee = Employee(data['id'], data['name'],
+                            data['address'], data['location_id'])
+
+        return json.dumps(employee.__dict__)
 
 
 def create_employee(employee):
@@ -81,3 +125,38 @@ def update_employee(id, updated_employee):
         if employee["id"] == id:
             EMPLOYEES[index] = updated_employee
             break
+
+
+def get_employees_by_location(location_id):
+    """
+    Gets the employees by the location id
+
+    Args:
+        location_id (int): The location id from the query params of the request
+
+    Returns:
+        Serialized sting of the data
+    """
+    with sqlite3.connect("./kennel.sqlite3") as conn:
+        conn.row_factory = sqlite3.Row
+        db_cursor = conn.cursor()
+
+        db_cursor.execute("""
+        SELECT
+            e.id,
+            e.name,
+            e.address,
+            e.location_id
+        FROM Employee e
+        WHERE e.location_id = ?
+        """, (location_id, ))
+
+        employees = []
+        dataset = db_cursor.fetchall()
+
+        for row in dataset:
+            employee = Employee(row['id'], row['name'],
+                                row['address'], row['location_id'])
+            employees.append(employee.__dict__)
+
+    return json.dumps(employees)
