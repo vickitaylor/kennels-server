@@ -1,6 +1,6 @@
 import sqlite3
 import json
-from models import Animal
+from models import Animal, Location, Customer
 
 
 ANIMALS = [
@@ -49,13 +49,23 @@ def get_all_animals():
         # Write the SQL query to get the information you want
         db_cursor.execute("""
         SELECT
-            a.id,
-            a.name,
+	        a.id,
+	        a.name,
             a.breed,
             a.status,
             a.location_id,
-            a.customer_id
-        FROM animal a
+            a.customer_id,
+            l.name location_name,
+            l.address location_address,
+	        c.name customer_name, 
+	        c.address customer_address,
+	        c.email customer_email,
+	        c.password customer_password
+        FROM Animal a
+        JOIN Location l
+            ON l.id = a.location_id
+        JOIN Customer c
+	        ON c.id = a.customer_id 
         """)
 
         # Initialize an empty list to hold all animal representations
@@ -72,6 +82,20 @@ def get_all_animals():
             animal = Animal(row['id'], row['name'], row['breed'],
                             row['status'], row['location_id'], row['customer_id'])
 
+            # Create a Location instance from the current row
+            location = Location(
+                row['id'], row['location_name'], row['location_address'])
+
+            # Creating a Customer instance
+            customer = Customer(
+                row['id'], row['customer_name'], row['customer_address'], row['customer_email'],
+                row['customer_password'])
+
+            # Add the dictionary representation of the location/customer to the animal
+            animal.location = location.__dict__
+            animal.customer = customer.__dict__
+
+            # Add the dictionary representation of the animal to the list
             animals.append(animal.__dict__)
 
     # Use 'json' package to properly serialize list as JSON
@@ -83,7 +107,7 @@ def get_single_animal(id):
     Gets the requested animal from the database
 
     Args:
-        id (int): The id of the requested animal
+        id(int): The id of the requested animal
 
     Returns:
         string: JSON serialized string of the animal from the database
@@ -103,7 +127,7 @@ def get_single_animal(id):
             a.location_id,
             a.customer_id
         FROM animal a
-        WHERE a.id = ?
+        WHERE a.id= ?
         """, (id, ))
 
         # Load the single result into memory
@@ -121,7 +145,7 @@ def create_animal(animal):
     Function that adds an new animal to the list
 
     Args:
-        animal (dict): The new animal to be added
+        animal(dict): The new animal to be added
 
     Returns:
         dict: The animal that was added with its new id
@@ -147,14 +171,14 @@ def delete_animal(id):
     Removes the selected animal from the list
 
     Args:
-        id (int): The id of the animal to be deleted
+        id(int): The id of the animal to be deleted
     """
     with sqlite3.connect("./kennel.sqlite3") as conn:
-            db_cursor = conn.cursor()
+        db_cursor = conn.cursor()
 
-            db_cursor.execute("""
+        db_cursor.execute("""
             DELETE from animal
-            WHERE id = ?
+            WHERE id= ?
             """, (id, ))
 
 
@@ -163,16 +187,34 @@ def update_animal(id, updated_animal):
     Updates a single animal in the database
 
     Args:
-        id (int): The id of the animal
-        updated_animal (dict): The updated animal dictionary
+        id(int): The id of the animal
+        updated_animal(dict): The updated animal dictionary
     """
-    # Iterate the ANIMALS list, but use enumerate() so that you can
-    # access the index value of each item
-    for index, animal in enumerate(ANIMALS):
-        if animal["id"] == id:
-            # Found the animal. update the value
-            ANIMALS[index] = updated_animal
-            break
+    with sqlite3.connect("./kennel.sqlite3") as conn:
+        db_cursor = conn.cursor()
+
+        db_cursor.execute("""
+        UPDATE Animal
+            SET
+                name= ?,
+                breed= ?,
+                status= ?,
+                location_id= ?,
+                customer_id= ?
+        WHERE id= ?
+        """, (updated_animal['name'], updated_animal['breed'], updated_animal['status'],
+              updated_animal['locationId'], updated_animal['customerId'], id, ))
+
+        # Were any rows affected?
+        # Did the client send an 'id' that exists?
+        rows_affected = db_cursor.rowcount
+
+    if rows_affected == 0:
+        # Forces 404 response by main module
+        return False
+    else:
+        # Forces 204 response by main module
+        return True
 
 
 def get_animals_by_location(location_id):
@@ -180,7 +222,7 @@ def get_animals_by_location(location_id):
     Gets the animal by the location id
 
     Args:
-        location_id (int): The location id from the query params of the request
+        location_id(int): The location id from the query params of the request
 
     Returns:
         Serialized sting of the data
@@ -198,7 +240,7 @@ def get_animals_by_location(location_id):
             a.location_id,
             a.customer_id
         FROM Animal a
-        WHERE a.location_id = ?
+        WHERE a.location_id= ?
         """, (location_id, ))
 
         animals = []
@@ -217,7 +259,7 @@ def get_animals_by_status(status):
     Gets the animal by the status
 
     Args:
-        status (string): The status from the query params of the request
+        status(string): The status from the query params of the request
 
     Returns:
         Serialized sting of the data
@@ -235,7 +277,7 @@ def get_animals_by_status(status):
             a.location_id,
             a.customer_id
         FROM Animal a
-        WHERE a.status = ?
+        WHERE a.status= ?
         """, (status, ))
 
         animals = []
