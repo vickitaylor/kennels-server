@@ -89,7 +89,7 @@ def get_single_employee(id):
         return json.dumps(employee.__dict__)
 
 
-def create_employee(employee):
+def create_employee(new_employee):
     """
     Function adds a new employee to the list
 
@@ -99,11 +99,22 @@ def create_employee(employee):
     Returns:
         dict: The employee that was added and its new id
     """
-    max_id = EMPLOYEES[-1]["id"]
-    new_id = max_id + 1
-    employee["id"] = new_id
-    EMPLOYEES.append(employee)
-    return employee
+    with sqlite3.connect("./kennel.sqlite3") as conn:
+        db_cursor = conn.cursor()
+
+        db_cursor.execute("""
+        INSERT INTO Employee
+            ( name, address, location_id )
+        VALUES 
+            ( ?, ?, ?);
+        """, (new_employee['name'], new_employee['address'],
+              new_employee['locationId'], ))
+
+        id = db_cursor.lastrowid
+
+        new_employee['id'] = id
+
+    return json.dumps(new_employee)
 
 
 def delete_employee(id):
